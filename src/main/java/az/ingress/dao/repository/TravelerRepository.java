@@ -1,9 +1,7 @@
 package az.ingress.dao.repository;
 
-import az.ingress.dao.entity.Traveler;
-import org.springframework.data.repository.CrudRepository;
-import org.springframework.stereotype.Repository;
+import az.ingress.dao.entity.TravelerEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-@Repository
-public interface TravelerRepository extends CrudRepository<Traveler, Long> {
+public interface TravelerRepository extends JpaRepository<TravelerEntity, Long> {
 }

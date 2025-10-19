@@ -25,10 +25,17 @@ dependencies {
     compileOnly "org.projectlombok:lombok"
     annotationProcessor "org.projectlombok:lombok"
 
+    //mapstruct
+    implementation "org.mapstruct:mapstruct:1.5.5.Final"
+    annotationProcessor "org.mapstruct:mapstruct-processor:1.5.5.Final"
+
     //swagger
     implementation "org.springdoc:springdoc-openapi-ui:$openApiVersion"
 
+    //database
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'org.postgresql:postgresql'
+    implementation 'org.liquibase:liquibase-core'
 
     //testing
     testImplementation "org.springframework.boot:spring-boot-starter-test"

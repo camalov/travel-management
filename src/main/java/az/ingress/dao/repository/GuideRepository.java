@@ -1,21 +1,20 @@
 package az.ingress.dao.repository;
 
-import az.ingress.dao.entity.Guide;
+import az.ingress.dao.entity.GuideEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.CrudRepository;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
 
-@Repository
-public interface GuideRepository extends CrudRepository<Guide, Long> {
+public interface GuideRepository extends JpaRepository<GuideEntity, Long> {
 
-    @Query("SELECT g FROM Guide g WHERE g.id NOT IN (" +
-            "SELECT gu.id FROM Tour t JOIN t.guides gu WHERE " +
-            "(:startDate < t.endDate) AND (:endDate > t.startDate))")
-    List<Guide> findAvailableGuidesInPeriod(@Param("startDate") LocalDate startDate,
-                                            @Param("endDate") LocalDate endDate);
+    @Query("""
+            SELECT g FROM GuideEntity g WHERE g.id NOT IN (
+                SELECT gu.id FROM TourEntity t JOIN t.guides gu WHERE
+                (:startDate < t.endDate) AND (:endDate > t.startDate)
+            )
+            """)
+    List<GuideEntity> findAvailableGuidesInPeriod(LocalDate startDate, LocalDate endDate);
 
 }

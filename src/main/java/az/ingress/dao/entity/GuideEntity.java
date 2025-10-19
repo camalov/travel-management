@@ -11,31 +11,33 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
+import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
-import java.time.LocalDate;
+import javax.persistence.Table;
+import java.util.Set;
 
 @Entity
+@Table(name = "guides")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
-public class Passport {
+public class GuideEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String passportNumber;
+    private String name;
 
-    private LocalDate issueDate;
+    private String email;
 
-    private LocalDate expiryDate;
+    private String phoneNumber;
 
-    private String countryName;
+    @ManyToMany(mappedBy = "guides")
+    private Set<TourEntity> tours;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "guide_id")
-    private Guide guide;
+    @OneToOne(mappedBy = "guide", fetch = FetchType.LAZY)
+    private PassportEntity passport;
 }

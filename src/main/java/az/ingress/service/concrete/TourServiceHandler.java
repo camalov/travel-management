@@ -1,20 +1,19 @@
 package az.ingress.service.concrete;
 
-import az.ingress.dao.entity.Destination;
-import az.ingress.dao.entity.Guide;
-import az.ingress.dao.entity.Tour;
-import az.ingress.dao.entity.Traveler;
-import az.ingress.dao.repository.GuideRepository;
+import az.ingress.dao.entity.GuideEntity;
+import az.ingress.dao.entity.TourEntity;
+import az.ingress.dao.entity.TravelerEntity;
 import az.ingress.dao.repository.TourRepository;
-import az.ingress.dao.repository.TravelerRepository;
+import az.ingress.mapper.TourMapper;
+import az.ingress.model.request.TourRequest;
+import az.ingress.model.response.TourResponse;
+import az.ingress.service.abstraction.GuideService;
 import az.ingress.service.abstraction.TourService;
+import az.ingress.service.abstraction.TravelerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -23,80 +22,105 @@ import java.util.stream.Collectors;
 public class TourServiceHandler implements TourService {
 
     private final TourRepository tourRepository;
-
-    private final GuideRepository guideRepository;
-
-    private final TravelerRepository travelerRepository;
-
+    private final TourMapper tourMapper;
+    private final TravelerService travelerService;
+    private final GuideService guideService;
 
     @Override
-    @Transactional(isolation = Isolation.SERIALIZABLE)
-    public Tour assignGuideToTour(Long tourId, Long guideId) {
-        Tour tour = tourRepository.findById(tourId)
-                .orElseThrow(() -> new IllegalArgumentException("Tour tapılmadı: " + tourId));
-        Guide guide = guideRepository.findById(guideId)
-                .orElseThrow(() -> new IllegalArgumentException("Guide tapılmadı: " + guideId));
+    public TourResponse createTour(TourRequest request) {
+        TourEntity tourEntity = tourMapper.toEntity(request);
+        return tourMapper.toResponse(tourRepository.save(tourEntity));
+    }
 
-        List<Tour> conflictingTours = tourRepository.findConflictingToursForGuide(
-                guideId,
-                tour.getStartDate(),
-                tour.getEndDate()
-        );
+    @Override
+    public TourResponse findTourById(Long id) {
+        return tourRepository.findById(id)
+                .map(tourMapper::toResponse)
+                .orElseThrow(() -> new IllegalArgumentException("Tour not found: " + id));
+    }
 
-        if (!conflictingTours.isEmpty()) {
-            String conflictNames = conflictingTours.stream()
-                    .map(Tour::getName)
-                    .collect(Collectors.joining(", "));
+    @Override
+    public TourEntity findEntityById(Long id) {
+        return tourRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Tour not found: " + id));
+    }
 
-            throw new IllegalStateException(
-                    String.format("Bələdçi (%s) bu tarixdə (%s - %s) artıq turlarda (%s) iştirak edir. " +
-                                    "Təyinat ləğv edildi.",
-                            guide.getName(), tour.getStartDate(), tour.getEndDate(), conflictNames));
+    @Override
+    public Set<TourResponse> findToursByIds(Set<Long> ids) {
+        return tourRepository.findAllById(ids).stream()
+                .map(tourMapper::toResponse)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public TourResponse updateTour(Long id, TourRequest request) {
+        return tourRepository.findById(id)
+                .map(tourEntity -> {
+                    tourMapper.updateEntity(tourEntity, request);
+                    return tourMapper.toResponse(tourRepository.save(tourEntity));
+                })
+                .orElseThrow(() -> new IllegalArgumentException("Tour not found: " + id));
+    }
+
+    @Override
+    public void deleteTour(Long id) {
+        if (!tourRepository.existsById(id)) {
+            throw new IllegalArgumentException("Tour not found: " + id);
         }
-
-        tour.getGuides().add(guide);
-        guide.getTours().add(tour);
-
-        return tourRepository.save(tour);
+        tourRepository.deleteById(id);
     }
 
     @Override
     @Transactional
-    public Tour addTravelerToTour(Long tourId, Long travelerId) {
-        Tour tour = tourRepository.findById(tourId)
-                .orElseThrow(() -> new IllegalArgumentException("Tour tapılmadı: " + tourId));
-        Traveler traveler = travelerRepository.findById(travelerId)
-                .orElseThrow(() -> new IllegalArgumentException("Səyyah tapılmadı: " + travelerId));
-
+    public void addTravelerToTour(Long tourId, Long travelerId) {
+        TourEntity tour = findEntityById(tourId);
+        TravelerEntity traveler = travelerService.findEntityById(travelerId);
         tour.getTravelers().add(traveler);
-        return tourRepository.save(tour);
-    }
-
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Destination> getDestinationsForTour(Long tourId) {
-        Tour tour = tourRepository.findById(tourId)
-                .orElseThrow(() -> new IllegalArgumentException("Tour tapılmadı: " + tourId));
-        return tour.getDestinations();
+        tourRepository.save(tour);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Set<Traveler> getTravelersForTour(Long tourId) {
-        Tour tour = tourRepository.findById(tourId)
-                .orElseThrow(() -> new IllegalArgumentException("Tour tapılmadı: " + tourId));
-        return tour.getTravelers();
+    public Set<Long> getTravelerIdsForTour(Long tourId) {
+        TourEntity tour = findEntityById(tourId);
+        return tour.getTravelers().stream()
+                .map(TravelerEntity::getId)
+                .collect(Collectors.toSet());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<Optional<Guide>> getGuidesWithPassportsForTour(Long tourId) {
-        Tour tour = tourRepository.findById(tourId)
-                .orElseThrow(() -> new IllegalArgumentException("Tour tapılmadı: " + tourId));
+    public Set<TourResponse> findToursByTraveler(Long travelerId) {
+        return tourRepository.findByTravelers_Id(travelerId).stream()
+                .map(tourMapper::toResponse)
+                .collect(Collectors.toSet());
+    }
 
+    @Override
+    @Transactional
+    public void assignGuideToTour(Long tourId, Long guideId) {
+        TourEntity tour = findEntityById(tourId);
+        GuideEntity guide = guideService.findEntityById(guideId);
+
+        var conflictingTours = tourRepository.findConflictingToursForGuide(guideId, tourId, tour.getStartDate(), tour.getEndDate());
+        if (!conflictingTours.isEmpty()) {
+            throw new IllegalStateException("Guide is already assigned to another tour in the given dates.");
+        }
+
+        tour.getGuides().add(guide);
+        tourRepository.save(tour);
+    }
+
+    @Override
+    public Set<Long> getGuideIdsForTour(Long tourId) {
+        TourEntity tour = findEntityById(tourId);
         return tour.getGuides().stream()
-                .map(guide -> guideRepository.findById(guide.getId()))
-                .collect(Collectors.toList());
+                .map(GuideEntity::getId)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public Set<TourResponse> findToursByGuide(Long guideId) {
+        return tourRepository.findByGuides_Id(guideId).stream()
+                .map(tourMapper::toResponse)
+                .collect(Collectors.toSet());
     }
 }

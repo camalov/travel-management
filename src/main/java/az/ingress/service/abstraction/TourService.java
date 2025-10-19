@@ -1,24 +1,25 @@
 package az.ingress.service.abstraction;
 
-import az.ingress.dao.entity.Destination;
-import az.ingress.dao.entity.Guide;
-import az.ingress.dao.entity.Tour;
-import az.ingress.dao.entity.Traveler;
+import az.ingress.dao.entity.TourEntity;
+import az.ingress.model.request.TourRequest;
+import az.ingress.model.response.TourResponse;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
-
 
 public interface TourService {
 
-    Tour assignGuideToTour(Long tourId, Long guideId);
+    TourResponse createTour(TourRequest request);
+    TourResponse findTourById(Long id);
+    TourEntity findEntityById(Long id);
+    Set<TourResponse> findToursByIds(Set<Long> ids);
+    TourResponse updateTour(Long id, TourRequest request);
+    void deleteTour(Long id);
 
-    Tour addTravelerToTour(Long tourId, Long travelerId);
+    void addTravelerToTour(Long tourId, Long travelerId);
+    Set<Long> getTravelerIdsForTour(Long tourId);
+    Set<TourResponse> findToursByTraveler(Long travelerId);
 
-    List<Destination> getDestinationsForTour(Long tourId);
-
-    Set<Traveler> getTravelersForTour(Long tourId);
-
-    List<Optional<Guide>> getGuidesWithPassportsForTour(Long tourId);
+    void assignGuideToTour(Long tourId, Long guideId);
+    Set<Long> getGuideIdsForTour(Long tourId);
+    Set<TourResponse> findToursByGuide(Long guideId);
 }
